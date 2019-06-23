@@ -34,7 +34,11 @@ void notify(byte callMode, bool followUp=false)
   udpOut[8] = effectCurrent;
   udpOut[9] = effectSpeed;
   udpOut[10] = col[3];
-  udpOut[11] = 5; //compatibilityVersionByte: 0: old 1: supports white 2: supports secondary color 3: supports FX intensity, 24 byte packet 4: supports transitionDelay 5: sup palette
+  //compatibilityVersionByte: 
+  //0: old 1: supports white 2: supports secondary color
+  //3: supports FX intensity, 24 byte packet 4: supports transitionDelay 5: sup palette
+  //6: supports tertiary color
+  udpOut[11] = 5; 
   udpOut[12] = colSec[0];
   udpOut[13] = colSec[1];
   udpOut[14] = colSec[2];
@@ -43,6 +47,10 @@ void notify(byte callMode, bool followUp=false)
   udpOut[17] = (transitionDelay >> 0) & 0xFF;
   udpOut[18] = (transitionDelay >> 8) & 0xFF;
   udpOut[19] = effectPalette;
+  /*udpOut[20] = colTer[0];
+  udpOut[21] = colTer[1];
+  udpOut[22] = colTer[2];
+  udpOut[23] = colTer[3];*/
   
   IPAddress broadcastIp;
   broadcastIp = ~uint32_t(WiFi.subnetMask()) | uint32_t(WiFi.gatewayIP());
@@ -177,11 +185,18 @@ void handleNotifications()
             colSec[2] = udpIn[14];
             colSec[3] = udpIn[15];
           }
+          /*if (udpIn[11] > 5)
+          {
+            colTer[0] = udpIn[20];
+            colTer[1] = udpIn[21];
+            colTer[2] = udpIn[22];
+            colSec[3] = udpIn[23];
+          }*/
         }
       }
 
       //apply effects from notification
-      if (receiveNotificationEffects || !someSel)
+      if (udpIn[11] < 200 && (receiveNotificationEffects || !someSel))
       {
         if (udpIn[8] < strip.getModeCount()) effectCurrent = udpIn[8];
         effectSpeed   = udpIn[9];
@@ -258,9 +273,9 @@ void setRealtimePixel(uint16_t i, byte r, byte g, byte b, byte w)
   uint16_t pix = i + arlsOffset;
   if (pix < ledCount)
   {
-    if (!arlsDisableGammaCorrection && useGammaCorrectionRGB)
+    if (!arlsDisableGammaCorrection && strip.gammaCorrectCol)
     {
-      strip.setPixelColor(pix, gamma8[r], gamma8[g], gamma8[b], gamma8[w]);
+      strip.setPixelColor(pix, strip.gamma8(r), strip.gamma8(g), strip.gamma8(b), strip.gamma8(w));
     } else {
       strip.setPixelColor(pix, r, g, b, w);
     }
